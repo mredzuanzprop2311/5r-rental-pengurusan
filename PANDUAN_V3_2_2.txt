@@ -1,0 +1,32 @@
+5R RENTAL & AUDIT V3.2.2 — PUSAT PENGURUSAN
+
+Uji HTML dahulu. Tiada deploy automatik. Aplikasi lama tidak diubah.
+
+SEBELUM KEMAS KINI
+1. Dalam aplikasi gabungan yang digunakan sekarang, tekan Sandaran penuh JSON. Simpan fail terkini.
+2. Gunakan index.html di dalam ZIP untuk menggantikan kod aplikasi gabungan pada alamat Cloudflare YANG SAMA: https://5r-rental-audit.mredzuanzprop.workers.dev/
+3. Jangan ganti aplikasi lama 5r-rental.pages.dev.
+4. Muat semula aplikasi gabungan; data pada pelayar/alamat yang sama dikekalkan. Tidak perlu import fail data permulaan semula.
+5. Tekan Pusat Pengurusan. Uji dan muat turun sandaran penuh selepas menambah rekod.
+
+KEMAS KINI V3.2.2
+Audit & Laporan kini di dalam Pusat Pengurusan. Butang Audit berasingan di bahagian atas dan butang terapung dikeluarkan.
+Menu Pendapatan Villa & Lain-lain dikeluarkan. Nombor menu berikutnya disusun semula. Rekod lama dan pengiraan laporan dikekalkan.
+
+MODUL
+Portfolio, Unit & Penyewa, Kutipan Sewa, Belanja, Anggaran, Aliran Tunai, Pembaikan, Vendor, Dokumen, SOP & Tugasan, Semakan Mingguan, Laporan Bulanan, Kesihatan & Kesediaan dan Sandaran.
+Bayaran masih direkod melalui Rental asal dalam aplikasi gabungan. Tiada lejar bayaran kedua.
+Aliran tunai: peruntukan sah kepada caj sewa mengikut tarikh bayaran tolak belanja aktif. Deposit, bil dan kredit belum diperuntukkan tidak dikira sebagai pendapatan sewa. Baki bukan keuntungan cukai.
+Anggaran diisi manual; rekod anggaran tidak menjadi transaksi. Kos pembaikan anggaran tidak menjadi belanja. Belanja sebenar direkod sekali dan dipaut ke pembaikan.
+Dokumen menggunakan pautan HTTP/HTTPS sahaja; tiada muat naik Drive.
+Nyahaktif/aktifkan semula menyimpan rekod dan jejak sebelum/selepas. Tugasan SOP bertarikh diisi manual. Panduan dibina khusus, bukan salinan bahan bonus berbayar.
+Semakan kesihatan ialah petunjuk rekod, bukan pengesahan data lengkap atau skor kredit.
+Pilihan Semua rumah termasuk belanja umum. Pilihan satu rumah hanya rekod rumah itu; belanja umum tidak diagih automatik.
+
+SIMPANAN
+Data masih disimpan dalam pelayar/peranti. Belum ada penyegerakan Google Sheet atau antara telefon dan komputer. Fail HTML/ZIP tidak mengandungi rekod peribadi atau JSON permulaan. Membuka HTML yang dimuat turun boleh kelihatan kosong kerana berbeza alamat daripada aplikasi live.
+Sandaran penuh V3.2 memasukkan modul operasi. Import sandaran lama yang belum mempunyai operasi mengekalkan operasi peranti semasa. Import sandaran V3.2 memulihkan operasi daripada fail tersebut selepas pratonton/pengesahan.
+Gunakan versi V3.2 untuk memulihkan sandaran yang mengandungi operasi. Versi lama tidak mengenali data operasi.
+
+CETAK
+Buka laporan, pilih rumah dan bulan, tekan Cetak / PDF. Pilih Simpan sebagai PDF dalam dialog pelayar.
