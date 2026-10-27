@@ -578,4 +578,48 @@ document.head.append(style);window.addEventListener('storage',e=>{if(e.key===KEY
 })();
 
 </script>
-</body></html>
+<script>
+(function(root){
+'use strict';
+const validMonth=s=>typeof s==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(s),safeSen=n=>Number.isSafeInteger(n)&&n>=0,active=r=>r&&r.void!==true;
+function build(d,month,today){
+ if(!validMonth(month))throw Error('Bulan permintaan tidak sah.');
+ if(!d?.base?.properties?.length||!d.leases?.length)throw Error('Tiada data Rental pada pelayar ini. Buka aplikasi Rental yang mempunyai data pada pelayar yang sama dahulu. Jangan import atau padam data tanpa semakan.');
+ const year=Number(month.slice(0,4));if(year<2022||year>Number(today.slice(0,4)))throw Error('Ringkasan tersedia dari 2022 hingga tahun semasa.');
+ const view=root.RentalAuditModel.audit(d,year,'',today),units=new Map(d.units.filter(active).map(r=>[r.id,r])),people=new Map(d.people.filter(active).map(r=>[r.id,r])),first=month+'-01',last=new Date(Date.UTC(year,Number(month.slice(5)),0)).toISOString().slice(0,10),notes=[];
+ const leases=d.leases.filter(active).filter(l=>typeof l.start==='string'&&l.start<=last&&(!l.end||l.end>=first)),unitCounts=new Map();for(const l of leases)unitCounts.set(l.unitId,(unitCounts.get(l.unitId)||0)+1);
+ if(leases.length>500)throw Error('Senarai melebihi had ringkasan Maybank.');
+ const tenants=leases.map(l=>{const u=units.get(l.unitId),person=people.get(l.personId),h=u&&d.base.properties.find(h=>h.id===u.propertyId&&!h.void),charges=view.charges.filter(c=>c.month===month&&c.category==='rent'&&d.charges.find(x=>x.id===c.id)?.leaseId===l.id),sum=charges.reduce((n,c)=>n+c.amount,0),balance=charges.reduce((n,c)=>n+c.balance,0);let rentSen=null,status='neutral';
+  const ts=(d.terms||[]).filter(t=>active(t)&&t.leaseId===l.id&&validMonth(t.month)&&t.month<=month).sort((a,b)=>b.month.localeCompare(a.month));
+  if(ts.length&&safeSen(ts[0].rentSen)&&ts.filter(t=>t.month===ts[0].month).length===1)rentSen=ts[0].rentSen;
+  else if(!ts.length&&charges.length&&safeSen(sum))rentSen=sum;
+  if(charges.length&&sum>0){if(balance===0)status='paid';else if(balance<sum)status='partial';else status=charges.some(c=>c.due&&c.due<today)?'overdue':'pending';}
+  if(rentSen!==null&&charges.length&&rentSen!==sum)notes.push('Ada kadar sewa berbeza daripada caj bulan dipilih. Semak prorata atau pelarasan; status menggunakan caj sebenar direkod.');
+  if(!charges.length)notes.push('Ada penyewa tanpa caj sewa untuk bulan dipilih; statusnya Perlu semak.');
+  if(!u||!person||!h||unitCounts.get(l.unitId)>1){rentSen=null;status='neutral';notes.push('Padanan unit/penyewa tidak lengkap atau sewaan bertindih. Semak Rental.');}
+  if(rentSen===null)notes.push('Ada kadar sewa belum dapat disahkan; jumlah tidak dilaporkan sebagai sifar.');
+  const end=typeof l.agreementEnd==='string'?l.agreementEnd:typeof l.end==='string'?l.end:'';
+  return {name:String(person?.name||'Nama belum dipadankan').slice(0,160),rentSen,status,endDate:end.slice(0,20)};
+ }).sort((a,b)=>(a.status==='paid')-(b.status==='paid')||a.name.localeCompare(b.name,'ms'));
+ const total=tenants.every(t=>t.rentSen!==null)?tenants.reduce((n,t)=>n+t.rentSen,0):null;if(total!==null&&!safeSen(total))throw Error('Jumlah di luar had amaun selamat.');
+ return {tenants,total,notes:[...new Set(notes)],revision:d.meta.revisi};
+}
+root.RentalMaybankSummary={build};if(typeof module!=='undefined')module.exports={build};
+if(typeof document==='undefined')return;
+const params=new URLSearchParams(location.search);if(params.get('maybank_rental')!=='1')return;
+const month=params.get('month')||'',nonce=params.get('nonce')||'',allowed=new Set(['https://maybank-gabungan.pages.dev','https://5r-maybank.pages.dev']);let origin='';try{const ref=new URL(document.referrer);if(allowed.has(ref.origin))origin=ref.origin;}catch{}
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur'}).format(new Date()),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=n=>n===null?'Perlu semak':'RM '+(n/100).toLocaleString('ms-MY',{minimumFractionDigits:2}),labels={paid:'Sudah bayar',partial:'Bayaran separa',overdue:'Tertunggak',pending:'Belum bayar',neutral:'Perlu semak'};
+let preview=null,sent=false;
+const box=document.createElement('section');box.id='rental-maybank-summary';box.innerHTML='<main><p class="eyebrow">5R RENTAL AUDIT · BACA SAHAJA</p><h1>Ringkasan Sewaan</h1><p>Bulan: <b id="rmb-month"></b></p><div id="rmb-data"></div><p class="note">Ringkasan dihantar automatik apabila dibuka melalui Maybank Gabungan. Deposit, bil, nombor telefon, nombor akaun dan token tidak dihantar. Status bayaran berdasarkan padanan caj sewa bulan dipilih dalam rekod semasa.</p><p id="rmb-status" role="status" aria-live="polite"></p><div class="actions"><button id="rmb-send" disabled>Hantar semula ringkasan</button><button id="rmb-refresh">Muat semula ringkasan</button><button id="rmb-app">Buka aplikasi Rental</button></div></main>';
+document.body.append(box);box.querySelector('#rmb-month').textContent=month;document.body.classList.add('rmb-open');
+const css=document.createElement('style');css.textContent='body.rmb-open>*:not(#rental-maybank-summary){display:none!important}body.rmb-open{margin:0;background:#f5f1e8;color:#173c43;overflow:auto!important}#rental-maybank-summary{padding:28px 18px;font:14px "Plus Jakarta Sans",system-ui,sans-serif;line-height:1.6}#rental-maybank-summary main{max-width:820px;margin:auto;padding:28px;background:#fff;border:1px solid #d4af37;border-radius:20px}#rental-maybank-summary h1{font-size:28px;margin:8px 0 20px}#rental-maybank-summary .eyebrow{letter-spacing:1.8px;color:#775b18;font-size:11px;font-weight:700}#rental-maybank-summary .total{font-size:27px;font-weight:800;color:#173c43}#rental-maybank-summary .scroll{overflow:auto}#rental-maybank-summary table{width:100%;border-collapse:collapse;min-width:490px;font-size:12px}#rental-maybank-summary th,#rental-maybank-summary td{padding:12px 8px;border-bottom:1px solid #e1e7df;text-align:left;vertical-align:top}#rental-maybank-summary th{background:#edf3ef}#rental-maybank-summary .paid{color:#14673f}#rental-maybank-summary .note{background:#fff8df;border-left:3px solid #d4af37;padding:12px 15px;border-radius:8px}#rental-maybank-summary button{font:inherit;padding:12px 16px;background:#173c43;color:#fff;border:1px solid #173c43;border-radius:10px;cursor:pointer}#rental-maybank-summary #rmb-send{display:none;background:#d4af37;color:#142e32;border-color:#d4af37;font-weight:700}#rental-maybank-summary button:disabled{opacity:.5;cursor:not-allowed}#rental-maybank-summary .actions{display:flex;gap:8px;flex-wrap:wrap}#rmb-status{font-weight:600;color:#7b3b22}@media(max-width:600px){#rental-maybank-summary{padding:14px}#rental-maybank-summary main{padding:18px}#rental-maybank-summary h1{font-size:24px}#rental-maybank-summary .actions{display:grid}}';document.head.append(css);
+const q=id=>document.getElementById(id),connected=()=>!!window.opener&&!window.opener.closed&&!!origin&&/^[a-zA-Z0-9_-]{16,100}$/.test(nonce);
+function refresh(){preview=null;q('rmb-send').disabled=true;try{preview=build(window.RENT_REPO.load(),month,today());q('rmb-data').innerHTML='<p>Jumlah kadar sewa bulanan</p><p class="total">'+money(preview.total)+'</p><p>'+preview.tenants.length+' penyewa · Revisi '+preview.revision+'</p>'+(preview.tenants.length?'<div class="scroll"><table><thead><tr><th>Penyewa</th><th>Kadar sewa</th><th>Status caj sewa</th><th>Tamat perjanjian</th></tr></thead><tbody>'+preview.tenants.map(t=>'<tr class="'+t.status+'"><td>'+esc(t.name)+'</td><td>'+money(t.rentSen)+'</td><td>'+labels[t.status]+'</td><td>'+esc(t.endDate||'Belum diisi')+'</td></tr>').join('')+'</tbody></table></div>':'<p>Tiada sewaan aktif untuk bulan dipilih.</p>')+preview.notes.map(n=>'<p class="note">'+esc(n)+'</p>').join('');q('rmb-status').textContent=sent?'Ringkasan telah dihantar. Untuk kemas kini, buka permintaan baharu dari Maybank Gabungan.':connected()?'Menghantar ringkasan secara automatik…':'Untuk menghantar, buka tetingkap ini melalui Muat ringkasan sewaan di Maybank Gabungan.';q('rmb-send').disabled=!connected()||sent;if(connected()&&!sent)queueMicrotask(sendSummary);}catch(e){q('rmb-data').textContent='Ringkasan belum tersedia.';q('rmb-status').textContent=e.message;}}
+q('rmb-refresh').onclick=refresh;
+function sendSummary(){try{if(sent||!connected()||!preview)throw Error('Sambungan Maybank tidak tersedia. Buka semula melalui Maybank Gabungan.');const latest=build(window.RENT_REPO.load(),month,today());if(JSON.stringify(latest)!==JSON.stringify(preview)){refresh();q('rmb-status').textContent='Data berubah. Semak pratonton terkini dan tekan Hantar semula.';return;}window.opener.postMessage({type:'5r:rental-summary',nonce,month,tenants:latest.tenants},origin);sent=true;q('rmb-send').disabled=true;q('rmb-status').textContent='Ringkasan dihantar automatik ke Maybank Gabungan. Anda boleh kembali ke tetingkap Maybank.';}catch(e){q('rmb-status').textContent=e.message;}};
+q('rmb-send').onclick=sendSummary;
+q('rmb-app').onclick=()=>{const u=new URL(location.href);for(const k of ['maybank_rental','month','nonce'])u.searchParams.delete(k);window.open(u.href,'_blank','noopener');};
+refresh();
+})(typeof window==='undefined'?globalThis:window);
+
+</script></body></html>
