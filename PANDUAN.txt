@@ -1,0 +1,12 @@
+PEMBETULAN SAMBUNGAN RENTAL V3.2.2
+
+1. Extract ZIP ini.
+2. GitHub: mredzuanzprop2311/5r-rental-pengurusan.
+3. Ganti index.html di peringkat utama repo menggunakan index.html ini. Commit changes.
+4. Tunggu deployment Cloudflare berjaya.
+5. Tutup popup Ringkasan Sewaan lama. Kembali ke Maybank Gabungan dan tekan Muat ringkasan sewaan.
+
+Tidak perlu import data lagi. Jangan padam data browser atau tukar domain. Rekod sedia ada kekal.
+
+Pembaikan hanya sambungan: tidak lagi bergantung pada referrer; destinasi penghantaran ditetapkan kepada https://maybank-gabungan.pages.dev. Semakan nonce, bulan, tetingkap dan origin penerima kekal.
+Ujian kod: referrer kosong/berubah, penghantaran sekali sahaja, tiada data/bulan tidak sah/opener tiada disekat, semua kod aplikasi asal selain bridge kekal. Ujian Chrome sebenar pengguna diperlukan selepas deployment.
